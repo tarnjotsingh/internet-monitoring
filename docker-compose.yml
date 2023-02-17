@@ -4,13 +4,9 @@ volumes:
     prometheus_data: {}
     grafana_data: {}
 
-networks:
-  front-tier:
-  back-tier:
-
 services:
   prometheus:
-    image: prom/prometheus:v2.0.0
+    image: prom/prometheus:latest
     volumes:
       - ./prometheus/:/etc/prometheus/
       - prometheus_data:/prometheus
@@ -24,8 +20,6 @@ services:
     links:
       - ping:ping
       - speedtest:speedtest
-    networks:
-      - back-tier
 
   grafana:
     image: grafana/grafana
@@ -38,10 +32,7 @@ services:
       - 3030:3000
     env_file:
       - ./grafana/config.monitoring
-    networks:
-      - back-tier
-      - front-tier
- 
+
   ping:
     tty: true
     stdin_open: true
@@ -54,32 +45,14 @@ services:
       - ./blackbox/config:/config
     command:
       - '--config.file=/config/blackbox.yml'
-    networks:
-      - back-tier
-
+      
   speedtest:
-    tty: true
-    stdin_open: true
-    expose:
-      - 9696
+    image: billimek/prometheus-speedtest-exporter:latest
+    restart: on-failure
     ports:
-      - 9696:9696
-    image: stefanwalther/speedtest-exporter
-    restart: always
-    networks:
-      - back-tier
-
-  sonos:
-    tty: true
-    stdin_open: true
-    expose: 
-      - 1915
-    ports:
-      - 1915:1915
-    image: maxandersen/sonos_exporter
-    command:
-      - '--address=0.0.0.0:1915'
-    network_mode: host
+      - 9469:9469
+    environment:
+      - server_ids=3855,1782,2225
 
   nodeexp:
     privileged: true
@@ -96,6 +69,3 @@ services:
       - '--path.sysfs=/host/sys'
       - --collector.filesystem.ignored-mount-points
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
-    networks:
-      - back-tier
-
